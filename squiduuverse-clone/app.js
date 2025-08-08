@@ -349,6 +349,7 @@ function drawGrid() {
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  applyHiDPI();
   drawGrid();
 
   // Edges
@@ -396,6 +397,23 @@ function draw() {
       roundRect(ctx, x - 4, y - 4, w + 8, h + 8, 14 * state.zoom, false, true);
     }
   });
+
+  // Temporary link preview
+  if (state.linkingFromId) {
+    const from = state.nodes.find((n) => n.id === state.linkingFromId);
+    if (from) {
+      const fs = worldToScreen(from.x + from.w / 2, from.y + from.h / 2);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(110,231,255,0.8)';
+      ctx.setLineDash([6, 6]);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(fs.x, fs.y);
+      ctx.lineTo(state.mouseX, state.mouseY);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
 }
 
 function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
@@ -447,23 +465,60 @@ let draggingNode = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
 
+// HiDPI support
+function applyHiDPI() {
+  // Canvas is already sized to device pixels; keep transform at 1:1
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+// Panning with Space or middle mouse
+let isSpacePanning = false;
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { isSpacePanning = true; }
+  if (e.key.toLowerCase() === 'delete' || e.key === 'Backspace') {
+    if (state.selectedNodeId) {
+      state.edges = state.edges.filter((ed) => ed.a !== state.selectedNodeId && ed.b !== state.selectedNodeId);
+      state.nodes = state.nodes.filter((n) => n.id !== state.selectedNodeId);
+      state.selectedNodeId = null;
+      draw();
+    }
+  } else if (e.key.toLowerCase() === 'l') {
+    if (state.selectedNodeId) {
+      state.linkingFromId = state.linkingFromId ? null : state.selectedNodeId;
+    }
+  } else if (e.key === 'Enter') {
+    if (state.selectedNodeId) {
+      const node = state.nodes.find((n) => n.id === state.selectedNodeId);
+      const text = prompt('Texte du post-it:', node.text);
+      if (text != null) { node.text = text; draw(); }
+    }
+  }
+});
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'Space') { isSpacePanning = false; }
+});
+
 canvas.addEventListener('mousedown', (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
   state.mouseX = x; state.mouseY = y;
   const node = pickNodeAt(x, y);
-  if (node) {
+
+  const wantPan = isSpacePanning || e.button === 1; // space or middle mouse
+  if (wantPan || !node) {
+    state.isPanning = true;
+    state.panStartX = x - state.offsetX;
+    state.panStartY = y - state.offsetY;
+  } else if (node) {
     draggingNode = node;
     state.selectedNodeId = node.id;
     const p = screenToWorld(x, y);
     dragOffsetX = p.x - node.x;
     dragOffsetY = p.y - node.y;
-  } else {
-    state.isPanning = true;
-    state.panStartX = x - state.offsetX;
-    state.panStartY = y - state.offsetY;
   }
+  document.body.style.userSelect = 'none';
   draw();
 });
 
@@ -484,9 +539,10 @@ canvas.addEventListener('mousemove', (e) => {
   }
 });
 
-canvas.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', () => {
   draggingNode = null;
   state.isPanning = false;
+  document.body.style.userSelect = '';
 });
 canvas.addEventListener('mouseleave', () => {
   draggingNode = null;
@@ -517,25 +573,19 @@ canvas.addEventListener('wheel', (e) => {
   draw();
 }, { passive: false });
 
-window.addEventListener('keydown', (e) => {
-  if (e.key.toLowerCase() === 'delete' || e.key === 'Backspace') {
-    if (state.selectedNodeId) {
-      state.edges = state.edges.filter((ed) => ed.a !== state.selectedNodeId && ed.b !== state.selectedNodeId);
-      state.nodes = state.nodes.filter((n) => n.id !== state.selectedNodeId);
-      state.selectedNodeId = null;
-      draw();
-    }
-  } else if (e.key.toLowerCase() === 'l') {
-    if (state.selectedNodeId) {
-      state.linkingFromId = state.linkingFromId ? null : state.selectedNodeId;
-    }
-  } else if (e.key === 'Enter') {
-    if (state.selectedNodeId) {
-      const node = state.nodes.find((n) => n.id === state.selectedNodeId);
-      const text = prompt('Texte du post-it:', node.text);
-      if (text != null) { node.text = text; draw(); }
-    }
+// Link mode button
+const ibLink = document.getElementById('ib-link');
+ibLink.addEventListener('click', () => {
+  if (state.linkingFromId) {
+    state.linkingFromId = null;
+    ibLink.classList.remove('active');
+  } else if (state.selectedNodeId) {
+    state.linkingFromId = state.selectedNodeId;
+    ibLink.classList.add('active');
+  } else {
+    alert('Sélectionnez d\'abord un post-it à lier.');
   }
+  draw();
 });
 
 canvas.addEventListener('click', (e) => {
@@ -547,11 +597,12 @@ canvas.addEventListener('click', (e) => {
     if (state.linkingFromId && state.linkingFromId !== node.id) {
       state.edges.push({ a: state.linkingFromId, b: node.id });
       state.linkingFromId = null;
+      ibLink.classList.remove('active');
       draw();
-    } else {
-      state.selectedNodeId = node.id;
-      draw();
+      return;
     }
+    state.selectedNodeId = node.id;
+    draw();
   } else {
     state.selectedNodeId = null;
     draw();
@@ -561,9 +612,15 @@ canvas.addEventListener('click', (e) => {
 function resizeCanvasToDisplaySize() {
   const width = canvas.clientWidth;
   const height = Math.max(480, Math.floor((canvas.clientWidth * 9) / 16));
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
+  const dpr = window.devicePixelRatio || 1;
+  if (canvas.style.width !== `${width}px`) canvas.style.width = `${width}px`;
+  if (canvas.style.height !== `${height}px`) canvas.style.height = `${height}px`;
+  const targetW = Math.floor(width * dpr);
+  const targetH = Math.floor(height * dpr);
+  if (canvas.width !== targetW || canvas.height !== targetH) {
+    canvas.width = targetW;
+    canvas.height = targetH;
+    applyHiDPI();
     draw();
   }
 }
@@ -619,21 +676,10 @@ ibImport.addEventListener('change', (e) => {
 });
 ibSnap.addEventListener('change', () => { state.snapToGrid = ibSnap.checked; });
 
-ibSnapshot.addEventListener('click', async () => {
-  const { toPng } = await import('https://cdn.skypack.dev/html-to-image@1.11.11');
-  // Render current canvas area to PNG by wrapping in an offscreen container
-  const container = document.createElement('div');
-  container.style.width = `${canvas.clientWidth}px`;
-  container.style.height = `${canvas.clientHeight}px`;
-  container.style.background = '#0b0d12';
-  // draw current canvas to image
-  const dataUrlCanvas = canvas.toDataURL('image/png');
-  container.innerHTML = `<img src="${dataUrlCanvas}" style="width:100%;height:100%;object-fit:contain;" />`;
-  document.body.appendChild(container);
-  const dataUrl = await toPng(container, { cacheBust: true, pixelRatio: 2 });
-  document.body.removeChild(container);
+// Simplify PNG export: directly from canvas
+ibSnapshot.addEventListener('click', () => {
   const a = document.createElement('a');
-  a.href = dataUrl;
+  a.href = canvas.toDataURL('image/png');
   a.download = 'brainstorm.png';
   a.click();
 });
