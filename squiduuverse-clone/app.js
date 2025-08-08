@@ -329,28 +329,35 @@ function createNode(x, y) {
 function worldToScreen(x, y) {
   return { x: x * state.zoom + state.offsetX, y: y * state.zoom + state.offsetY };
 }
+function worldToScreenScaled(x, y) {
+  const dpr = window.devicePixelRatio || 1;
+  return { x: (x * state.zoom + state.offsetX), y: (y * state.zoom + state.offsetY) };
+}
 function screenToWorld(x, y) {
   return { x: (x - state.offsetX) / state.zoom, y: (y - state.offsetY) / state.zoom };
 }
 
-function drawGrid() {
+function drawGrid(cssWidth, cssHeight) {
   const step = 32 * state.zoom;
   ctx.save();
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.lineWidth = 1;
-  for (let x = (state.offsetX % step); x < canvas.width; x += step) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+  for (let x = (state.offsetX % step); x < cssWidth; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, cssHeight); ctx.stroke();
   }
-  for (let y = (state.offsetY % step); y < canvas.height; y += step) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  for (let y = (state.offsetY % step); y < cssHeight; y += step) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cssWidth, y); ctx.stroke();
   }
   ctx.restore();
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
   applyHiDPI();
-  drawGrid();
+  const dpr = window.devicePixelRatio || 1;
+  const cssWidth = canvas.width / dpr;
+  const cssHeight = canvas.height / dpr;
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+  drawGrid(cssWidth, cssHeight);
 
   // Edges
   ctx.save();
@@ -467,8 +474,8 @@ let dragOffsetY = 0;
 
 // HiDPI support
 function applyHiDPI() {
-  // Canvas is already sized to device pixels; keep transform at 1:1
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 // Panning with Space or middle mouse
@@ -499,6 +506,7 @@ window.addEventListener('keyup', (e) => {
   if (e.code === 'Space') { isSpacePanning = false; }
 });
 
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('mousedown', (e) => {
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -506,7 +514,7 @@ canvas.addEventListener('mousedown', (e) => {
   state.mouseX = x; state.mouseY = y;
   const node = pickNodeAt(x, y);
 
-  const wantPan = isSpacePanning || e.button === 1; // space or middle mouse
+  const wantPan = isSpacePanning || e.button === 1 || e.button === 2; // space, middle or right mouse
   if (wantPan || !node) {
     state.isPanning = true;
     state.panStartX = x - state.offsetX;
@@ -627,6 +635,22 @@ function resizeCanvasToDisplaySize() {
 
 window.addEventListener('resize', resizeCanvasToDisplaySize);
 resizeCanvasToDisplaySize();
+
+// Seed example nodes on first load
+(function seedIfEmpty() {
+  if (state.nodes.length === 0) {
+    // Place two nodes roughly centered
+    const cx = (canvas.clientWidth || 800) / 2;
+    const cy = (canvas.clientHeight || 450) / 2;
+    createNode(cx - 160, cy);
+    createNode(cx + 160, cy);
+    if (state.nodes.length >= 2) {
+      state.edges.push({ a: state.nodes[0].id, b: state.nodes[1].id });
+      state.selectedNodeId = state.nodes[0].id;
+    }
+    draw();
+  }
+})();
 
 // Controls
 const ibAdd = document.getElementById('ib-add');
