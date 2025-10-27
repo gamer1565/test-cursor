@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Squiduuverse Tools (Clone) — ThumbView • StatLab • Infinite Brainstorm</title>
+    <meta name="description" content="Clone open-source des outils ThumbView, StatLab et Infinite Brainstorm, optimisé pour l'intégration Canva (embed)." />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <div class="logo">🦑</div>
+        <div>
+          <h1>Squiduuverse Tools (Clone)</h1>
+          <p class="subtitle">ThumbView • StatLab • Infinite Brainstorm</p>
+        </div>
+      </div>
+      <nav class="tabs" role="tablist" aria-label="Outils">
+        <button class="tab active" data-tab="thumbview" role="tab" aria-selected="true">ThumbView</button>
+        <button class="tab" data-tab="statlab" role="tab" aria-selected="false">StatLab</button>
+        <button class="tab" data-tab="brainstorm" role="tab" aria-selected="false">Infinite Brainstorm</button>
+      </nav>
+    </header>
+
+    <main class="app-main">
+      <!-- ThumbView -->
+      <section id="thumbview" class="panel active" role="tabpanel" aria-labelledby="tab-thumbview">
+        <div class="panel-header">
+          <h2>ThumbView</h2>
+          <p>Prévisualisez une miniature YouTube dans différents contextes (flux, page vidéo, mobile) et thèmes.</p>
+        </div>
+
+        <div class="grid two">
+          <div class="card controls">
+            <div class="field">
+              <label for="thumb-file">Miniature (upload)</label>
+              <input type="file" id="thumb-file" accept="image/*" />
+            </div>
+            <div class="field">
+              <label for="thumb-url">…ou URL de l'image</label>
+              <input type="url" id="thumb-url" placeholder="https://exemple.com/thumbnail.jpg" />
+            </div>
+            <div class="field split">
+              <div>
+                <label for="tv-context">Contexte</label>
+                <select id="tv-context">
+                  <option value="feed">Flux YouTube (desktop)</option>
+                  <option value="watch">Page vidéo</option>
+                  <option value="mobile">Flux mobile</option>
+                </select>
+              </div>
+              <div>
+                <label for="tv-theme">Thème</label>
+                <select id="tv-theme">
+                  <option value="light">Clair</option>
+                  <option value="dark">Sombre</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="tv-title">Titre vidéo</label>
+              <input type="text" id="tv-title" placeholder="Titre accrocheur de la vidéo" />
+            </div>
+            <div class="field split">
+              <div>
+                <label for="tv-channel">Chaîne</label>
+                <input type="text" id="tv-channel" placeholder="Nom de la chaîne" />
+              </div>
+              <div>
+                <label for="tv-metrics">Stats (ex: 1,2 M vues • il y a 2 jours)</label>
+                <input type="text" id="tv-metrics" placeholder="123 k vues • il y a 3 jours" />
+              </div>
+            </div>
+            <div class="field">
+              <label class="checkbox">
+                <input type="checkbox" id="tv-duration-toggle" checked />
+                <span>Afficher le badge de durée</span>
+              </label>
+            </div>
+            <div class="field split">
+              <div>
+                <label for="tv-duration">Durée (mm:ss)</label>
+                <input type="text" id="tv-duration" value="10:24" />
+              </div>
+              <div>
+                <label for="tv-corner">Rayon d'arrondi</label>
+                <input type="range" id="tv-corner" min="0" max="24" value="12" />
+              </div>
+            </div>
+            <div class="actions">
+              <button id="tv-download" class="btn primary">Exporter l'aperçu (PNG)</button>
+              <button id="tv-reset" class="btn">Réinitialiser</button>
+            </div>
+          </div>
+
+          <div class="card preview" id="tv-preview-wrapper">
+            <div id="tv-preview"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- StatLab -->
+      <section id="statlab" class="panel" role="tabpanel" aria-labelledby="tab-statlab">
+        <div class="panel-header">
+          <h2>StatLab</h2>
+          <p>Tableau de bord YouTube. Utilisez une clé API pour des données réelles ou explorez le mode démo.</p>
+        </div>
+
+        <div class="card">
+          <div class="grid two">
+            <div>
+              <div class="field">
+                <label for="yt-api-key">Clé API YouTube (facultatif)</label>
+                <input type="password" id="yt-api-key" placeholder="AIza…" />
+              </div>
+              <div class="field">
+                <label for="yt-channel">Chaîne (ID, handle @, ou URL)</label>
+                <input type="text" id="yt-channel" placeholder="@votreHandle ou UCxxxxxxxx" />
+              </div>
+              <div class="actions">
+                <button id="sl-fetch" class="btn primary">Récupérer</button>
+                <button id="sl-demo" class="btn">Charger démo</button>
+              </div>
+            </div>
+            <div>
+              <div class="kpis" id="sl-kpis">
+                <div class="kpi"><div class="kpi-label">Abonnés</div><div class="kpi-value" id="kpi-subs">—</div></div>
+                <div class="kpi"><div class="kpi-label">Vues totales</div><div class="kpi-value" id="kpi-views">—</div></div>
+                <div class="kpi"><div class="kpi-label">Vidéos</div><div class="kpi-value" id="kpi-videos">—</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Dernières vidéos</h3>
+          <div class="table-scroll">
+            <table class="data" id="sl-table">
+              <thead>
+                <tr>
+                  <th>Miniature</th>
+                  <th>Titre</th>
+                  <th>Vues</th>
+                  <th>Likes</th>
+                  <th>Commentaires</th>
+                  <th>Publié</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Infinite Brainstorm -->
+      <section id="brainstorm" class="panel" role="tabpanel" aria-labelledby="tab-brainstorm">
+        <div class="panel-header">
+          <h2>Infinite Brainstorm</h2>
+          <p>Un canvas infini pour noter et relier des idées. Double-cliquez pour créer un post-it, glissez pour déplacer, reliez avec la touche L.</p>
+        </div>
+
+        <div class="grid three">
+          <div class="card">
+            <div class="actions column">
+              <button id="ib-add" class="btn">Nouveau post-it</button>
+              <button id="ib-center" class="btn">Recentrer</button>
+              <button id="ib-link" class="btn">Mode lien (L)</button>
+              <button id="ib-export" class="btn">Exporter JSON</button>
+              <label class="btn file-btn">Importer JSON
+                <input type="file" id="ib-import" accept="application/json" />
+              </label>
+              <button id="ib-snapshot" class="btn">Exporter image (PNG)</button>
+              <label class="checkbox mt">
+                <input type="checkbox" id="ib-snap" checked />
+                <span>Magnétisme grille</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="card col-span-2 brainstorm-wrapper">
+            <canvas id="ib-canvas" width="1600" height="900" aria-label="Brainstorm canvas"></canvas>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <div>
+        <span>Open-source clone à des fins éducatives.</span>
+        <a href="https://developers.google.com/youtube/v3" target="_blank" rel="noreferrer">API YouTube Data v3</a>
+        <span>• Intégrable dans Canva via Embed</span>
+      </div>
+    </footer>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
